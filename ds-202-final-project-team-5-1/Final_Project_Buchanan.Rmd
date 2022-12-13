@@ -1,0 +1,442 @@
+---
+title: 'Final Project Data Science 202'
+author: "Nathan Buchanan"
+date: "11/20/2022"
+output: html_document
+---
+
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+library(classdata)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(httr)
+
+
+census_2021 <- read.csv("https://raw.githubusercontent.com/nwbuchanan/final-project/main/2021_housing_characteristics.csv")
+
+census_2019 <- read.csv("https://raw.githubusercontent.com/nwbuchanan/final-project/main/2019_housing_characteristics.csv")
+                        
+census_2018 <- read.csv("https://raw.githubusercontent.com/nwbuchanan/final-project/main/2018_housing_characteristics.csv")
+
+census_2017 <- read.csv("https://raw.githubusercontent.com/nwbuchanan/final-project/main/2017_housing_characteristics.csv")
+
+census_2016 <- read.csv("https://raw.githubusercontent.com/nwbuchanan/final-project/main/2016_housing_characteristics.csv")
+
+housing <- read.csv("https://econdata.s3-us-west-2.amazonaws.com/Reports/Core/RDC_Inventory_Core_Metrics_State_History.csv")
+
+housing_county <- read.csv("https://econdata.s3-us-west-2.amazonaws.com/Reports/Core/RDC_Inventory_Core_Metrics_County_History.csv")
+
+census_2016 <- census_2016 %>% select("Label..Grouping.",ends_with("Estimate")) %>% select(-"Puerto.Rico..Estimate")
+census_2017 <- census_2017 %>% select("Label..Grouping.",ends_with("Estimate")) %>% select(-"Puerto.Rico..Estimate")
+census_2018 <- census_2018 %>% select("Label..Grouping.",ends_with("Estimate")) %>% select(-"Puerto.Rico..Estimate")
+census_2019 <- census_2019 %>% select("Label..Grouping.",ends_with("Estimate")) %>% select(-"Puerto.Rico..Estimate")
+census_2021 <- census_2021 %>% select("Label..Grouping.",ends_with("Estimate")) %>% select(-"Puerto.Rico..Estimate")
+
+census_2016 <- data.frame(t(census_2016))
+census_2017 <- data.frame(t(census_2017))
+census_2018 <- data.frame(t(census_2018))
+census_2019 <- data.frame(t(census_2019))
+census_2021 <- data.frame(t(census_2021))
+
+colnames(census_2016) <- as.character(census_2016[1,])
+colnames(census_2017) <- as.character(census_2017[1,])
+colnames(census_2018) <- as.character(census_2018[1,])
+colnames(census_2019) <- as.character(census_2019[1,])
+colnames(census_2021) <- as.character(census_2021[1,])
+
+census_2016 <- census_2016[-1,]
+census_2017 <- census_2017[-1,]
+census_2018 <- census_2018[-1,]
+census_2019 <- census_2019[-1,]
+census_2021 <- census_2021[-1,]
+
+
+summary(housing)
+dim(housing)
+str(housing)
+head(housing)
+
+```
+
+
+```{r Data Cleaning, include = TRUE}
+housing <- housing %>% mutate(
+  Date = ym(month_date_yyyymm),
+  Year = year(Date),
+  Month = month(Date),
+)
+
+housing_county <- housing_county %>% mutate(
+  Date = ym(month_date_yyyymm),
+  Year = year(Date),
+  Month = month(Date)
+)
+
+housing_clean <- housing %>% filter(quality_flag==0)
+housing_2016 <- housing %>% filter(Year==2016)
+housing_2017 <- housing %>% filter(Year==2017)
+housing_2018 <- housing %>% filter(Year==2018)
+housing_2019 <- housing %>% filter(Year==2019)
+housing_2020 <- housing %>% filter(Year==2020)
+housing_2021 <- housing %>% filter(Year==2021)
+housing_2022 <- housing %>% filter(Year==2022)
+housing_december <- housing %>% filter(Month==12)
+housing_january <- housing %>% filter(Month==1)
+housing_august <- housing %>% filter(Month==8)
+marshall <- housing %>% filter(state == "marshall islands")
+housing <- housing %>% filter(state != "marshall islands") 
+housing <- housing[-3928,]
+
+
+
+
+ggplot(housing_2016,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2017,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2018,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2019,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2020,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2021,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2022,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+
+```
+
+```{r Average, include=TRUE}
+
+ggplot(housing_2016,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2017,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2018,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2019,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2020,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2021,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+ggplot(housing_2022,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Month")
+
+```
+
+```{r december,include=TRUE}
+
+ggplot(housing_december,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")
+
+ggplot(housing_december,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")
+
+ggplot(housing_january,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")
+
+ggplot(housing_january,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")
+
+ggplot(housing_august,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")+ggtitle("Median Listing Price, August")
+
+ggplot(housing_august,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=3))+facet_wrap("Year")+ggtitle("Average Listing Price, August")
+
+```
+
+```{r boxplot, include=TRUE}
+ggplot(housing,aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,color=state))+theme(legend.position = 'none') +geom_boxplot()+theme(axis.text.x = element_text(angle=90,size=8))+ggtitle("Median Listing Price")
+
+ggplot(housing,aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=average_listing_price,color=state)) +geom_boxplot()+theme(axis.text.x = element_text(angle=90,size=8)) + theme(legend.position = 'none')+ggtitle("Average Listing Price")
+```
+
+```{r December more details, include=TRUE}
+
+housing_december %>% filter(Year==2021) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_december %>% filter(Year==2020) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_december %>% filter(Year==2019) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_december %>% filter(Year==2018) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_december %>% filter(Year==2017) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_december %>% filter(Year==2016) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2022) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2021) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2020) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2019) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2018) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_january %>% filter(Year==2017) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2021) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2020) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2019) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2018) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2017) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))
+
+housing_august %>% filter(Year==2022) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))+ggtitle("Median Listing Price, August 2022")
+
+housing_august %>% filter(Year==2016) %>% ggplot(aes(x=reorder(state,median_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))+ggtitle("Median Listing Price, August 2016")
+
+housing_august %>% filter(Year==2022) %>% ggplot(aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))+ggtitle("Average Listing Price, August 2022")
+
+housing_august %>% filter(Year==2016) %>% ggplot(aes(x=reorder(state,average_listing_price,decreasing=TRUE),y=median_listing_price,fill=state)) +geom_bar(stat="identity")+theme(legend.position='none',axis.text.x = element_text(angle=90,size=10))+ggtitle("Average Listing Price, August 2016")
+```
+```{r, include = TRUE}
+ggplot(housing,aes(x=Date,y=median_listing_price))+geom_point()
+
+ggplot(housing,aes(x=Date,y=average_listing_price))+geom_point()
+
+housing_county %>% filter(median_listing_price<50000000) %>%
+  ggplot(aes(x=Date,y=median_listing_price))+geom_point()
+
+housing_county %>% filter(average_listing_price<50000000) %>%
+  ggplot(aes(x=Date,y=average_listing_price))+geom_point()
+
+```
+
+```{r test, include=TRUE}
+
+
+ggplot(housing, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')+ggtitle("Median Listing Price Scatterplot Grouped by State")
+
+ggplot(housing, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')+ggtitle("Average Listing Price Scatterplot Grouped by State")
+
+ggplot(housing_2016, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2017, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2018, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2019, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2020, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2021, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2022, aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2016, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2017, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2018, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2019, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2020, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2021, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+ggplot(housing_2022, aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()+theme(legend.position = 'none')
+
+```
+
+```{r, include=TRUE}
+
+list1 <- c("Hawaii","District of Columbia","California","Colorado","Massachusetts","Oregon","Utah","Washington","Connecticut","Montana")
+
+list2 <- c("New York", "Rhode Island", "Florida","Nevada","Arizona","New Jersey","Maryland","New Hampshire","Delaware","Alaska")
+
+list3 <- c("Virginia", "Texas", "Idaho", "Vermont", "North Carolina","Minnesota","South Carolina","North Dakota","Georgia","Wyomng")
+
+list4 <- c("Tennessee","New Mexico","South Dakota","Maine","Louisana","Illinois","Nebraska","Alabama","Wisconsin","Oklahoma")
+
+list5 <- c("Pennsylvania","Mississippi","Iowa","Kentucky","Arkansas","Missouri","West Virginia","Michigan","Kansas","Indiana","Ohio")
+
+
+housing %>% filter(state %in% list1) %>%
+ggplot(aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list2) %>% 
+ggplot(aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list3) %>% 
+ggplot(aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list4) %>% 
+ggplot(aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list5) %>% 
+ggplot(aes(x=Date,y=median_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list1) %>%
+ggplot(aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list2) %>% 
+ggplot(aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list3) %>% 
+ggplot(aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list4) %>% 
+ggplot(aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()
+
+housing %>% filter(state %in% list5) %>% 
+ggplot(aes(x=Date,y=average_listing_price,group=state,color=state))+geom_line()+geom_point()
+```
+
+
+```{r, include=TRUE}
+
+ggplot(housing,aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()+theme(legend.position = 'none')
+
+ggplot(housing,aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()+theme(legend.position = 'none')
+
+housing %>% filter(state %in% list1) %>%
+  ggplot(aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list2) %>%
+  ggplot(aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list3) %>%
+  ggplot(aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list4) %>%
+  ggplot(aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list5) %>%
+  ggplot(aes(x=Date,y=median_listing_price_mm,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list1) %>%
+  ggplot(aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list2) %>%
+  ggplot(aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list3) %>%
+  ggplot(aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list4) %>%
+  ggplot(aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()
+
+housing %>% filter(state %in% list5) %>%
+  ggplot(aes(x=Date,y=median_listing_price_yy,group=state,color=state))+geom_point()+geom_line()
+
+
+
+```
+
+
+```{r, include=TRUE}
+
+
+difference <- housing %>% group_by(state) %>% summarize(
+  count = n(),
+  median_difference = median_listing_price-median_listing_price[month_date_yyyymm==201607],
+  median_percent_difference = 100*median_difference/median_listing_price[month_date_yyyymm==201607],
+  average_difference = average_listing_price-average_listing_price[month_date_yyyymm==201607],
+  average_percent_difference = 100*average_difference/average_listing_price[month_date_yyyymm==201607],
+  Date = Date,
+  Year = Year,
+  Month = Month
+)
+
+ggplot(difference,aes(x=Date,y=median_difference,color=state,group=state))+geom_point()+geom_line()+theme(legend.position='none')+ggtitle("Change in Median Listing Price")
+
+ggplot(difference,aes(x=Date,y=median_percent_difference,color=state,group=state))+geom_point()+geom_line()+theme(legend.position='none')+ggtitle("Percent Change in Median Listing Price")
+
+ggplot(difference,aes(x=Date,y=average_difference,color=state,group=state))+geom_point()+geom_line()+theme(legend.position='none')+ggtitle("Change in Average Listing Price")
+
+ggplot(difference,aes(x=Date,y=average_percent_difference,color=state,group=state))+geom_point()+geom_line()+theme(legend.position='none')+ggtitle("Percent Change in Average Listing Price")
+
+
+```
+
+
+
+```{r, include=TRUE}
+census_2016$States <- row.names(census_2016)
+census_2016 <- census_2016[, !duplicated(colnames(census_2016))]
+
+census_2016 <- census_2016 %>% summarize(
+  States = census_2016$States,
+  Total_Housing = census_2016$`    Total housing units`,
+  Occupied_Housing = census_2016$`    Occupied housing units`,
+  Vacant_Housing = census_2016$`        Vacant housing units`,
+  Homeowner_Vacancy = census_2016$`    Homeowner vacancy rate`,
+  Rental_Vacancy = census_2016$`    Rental vacancy rate`,
+  Built_2010 = as.numeric(census_2016$`        Built 2014 or later`)+as.numeric(census_2016$`        Built 2010 to 2013`),
+  Price_Median = census_2016$`        Median (dollars)`,
+  Year = 2016
+)
+
+census_2017$States <- row.names(census_2017)
+census_2017 <- census_2017[, !duplicated(colnames(census_2017))]
+census_2017 <- census_2017 %>% summarize(
+  States = census_2017$States,
+  Total_Housing = census_2017$`    Total housing units`,
+  Occupied_Housing = census_2017$`    Occupied housing units`,
+  Vacant_Housing = census_2017$`        Vacant housing units`,
+  Homeowner_Vacancy = census_2017$`    Homeowner vacancy rate`,
+  Rental_Vacancy = census_2017$`    Rental vacancy rate`,
+  Built_2010 = as.numeric(census_2017$`        Built 2014 or later`)+as.numeric(census_2017$`        Built 2010 to 2013`),
+  Price_Median = census_2017$`        Median (dollars)`,
+  Year = 2017
+)
+
+census_2018$States <- row.names(census_2018)
+census_2018 <- census_2018[, !duplicated(colnames(census_2018))]
+census_2018 <- census_2018 %>% summarize(
+  States = census_2018$States,
+  Total_Housing = census_2018$`    Total housing units`,
+  Occupied_Housing = census_2018$`    Occupied housing units`,
+  Vacant_Housing = census_2018$`        Vacant housing units`,
+  Homeowner_Vacancy = census_2018$`        Homeowner vacancy rate`,
+  Rental_Vacancy = census_2018$`        Rental vacancy rate`,
+  Built_2010 = as.numeric(census_2018$`        Built 2014 or later`)+as.numeric(census_2018$`        Built 2010 to 2013`),
+  Price_Median = census_2018$`        Median (dollars)`,
+  Year = 2018
+)
+census_2019$States <- row.names(census_2019)
+census_2019 <- census_2019[, !duplicated(colnames(census_2019))]
+census_2019 <- census_2019 %>% summarize(
+  States = census_2019$States,
+  Total_Housing = census_2019$`    Total housing units`,
+  Occupied_Housing = census_2019$`    Occupied housing units`,
+  Vacant_Housing = census_2019$`        Vacant housing units`,
+  Homeowner_Vacancy = census_2019$`        Homeowner vacancy rate`,
+  Rental_Vacancy = census_2019$`        Rental vacancy rate`,
+  Built_2010 = as.numeric(census_2019$`        Built 2014 or later`)+as.numeric(census_2019$`        Built 2010 to 2013`),
+  Price_Median = census_2019$`        Median (dollars)`,
+  Year = 2019
+)
+
+census_2021$States <- row.names(census_2021)
+census_2021 <- census_2021[, !duplicated(colnames(census_2021))]
+census_2021 <- census_2021%>% summarize(
+  States = census_2021$States,
+  Total_Housing = census_2021$`    Total housing units`,
+  Occupied_Housing = census_2021$`    Occupied housing units`,
+  Vacant_Housing = census_2021$`        Vacant housing units`,
+  Homeowner_Vacancy = census_2021$`        Homeowner vacancy rate`,
+  Rental_Vacancy = census_2021$`        Rental vacancy rate`,
+  Built_2010 = as.numeric(census_2021$`        Built 2020 or later`)+as.numeric(census_2021$`        Built 2010 to 2019`),
+  Price_Median = census_2021$`        Median (dollars)`,
+  Year = 2021
+)
+
+census_data <- rbind(census_2016,census_2017,census_2018,census_2019,census_2021)
+census_data$States <- gsub('..Estimate','',census_data$States)
+
+ggplot(census_data,aes(x=Year,y=Built_2010,group=States,color=States))+geom_point()+geom_line()+theme(legend.position = 'none')
+```
+
+
+
+
+
+
